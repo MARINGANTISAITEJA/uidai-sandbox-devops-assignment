@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: ekyc-api-alerts
+  namespace: monitoring
+
+spec:
+  groups:
+  - name: ekyc-api.rules
+
+    rules:
+    - alert: HighEkycErrorRate
+
+      expr: |
+        (
+          sum(rate(http_requests_total{job="mock-ekyc-api",status=~"5.."}[5m])) by (namespace)
+          /
+          sum(rate(http_requests_total{job="mock-ekyc-api"}[5m])) by (namespace)
+        ) * 100 > 5
+
+      for: 2m
+
+      labels:
+        severity: critical
+        service: mock-ekyc-api
+
+      annotations:
+        summary: "High eKYC API error rate detected"
+
+        description: |
+          The Mock eKYC API in namespace {{ $labels.namespace }}
+          is returning more than 5% HTTP 5xx responses
+          continuously for the last 2 minutes.
+
+        runbook_url: "https://internal-docs/runbooks/mock-ekyc-api"
